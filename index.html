@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Helply connects students with volunteer events, tracks service hours and rewards participation.">
+<meta name="theme-color" content="#ADC4C1">
+<title>Helply | Volunteer prototype</title>
+<link rel="icon" type="image/png" href="assets/favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Figtree:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="stage">
+  <aside class="rail" aria-label="Prototype screens">
+    <img class="rail-logo" data-logo alt="Helply logo: a heart-shaped globe held in an open hand">
+    <h1>Helply</h1>
+    <p>Mobile prototype. Jump to any screen, or follow the flow from sign-in through to your hours.</p>
+    <ol id="railList">
+      <li><button data-go="1"><b>Sign in</b><span>School or state ID</span></button></li>
+      <li><button data-go="2"><b>Discover</b><span>ZIP lookup, list + news ideas</span></button></li>
+      <li><button data-go="3"><b>Event + Tidy bot</b><span>Date, cause, AI logistics</span></button></li>
+      <li><button data-go="4"><b>Check-in</b><span>Personal QR code</span></button></li>
+      <li><button data-go="5"><b>Hours</b><span>Tracker, raffle, Instagram</span></button></li>
+      <li><button data-go="6"><b>Messages</b><span>Event chats, safe DMs</span></button></li>
+    </ol>
+    <button class="reset" id="resetBtn">Reset demo</button>
+  </aside>
+
+  <main class="phone" id="phone">
+    <div class="screens">
+      <section class="screen active" id="s1" aria-label="Sign in"></section>
+      <section class="screen" id="s2" aria-label="Discover opportunities"></section>
+      <section class="screen" id="s3" aria-label="Event details"></section>
+      <section class="screen" id="s4" aria-label="Check-in"></section>
+      <section class="screen" id="s5" aria-label="Service hours"></section>
+      <section class="screen" id="s6" aria-label="Messages"></section>
+    </div>
+    <nav class="tabs" id="tabs" hidden aria-label="Main">
+      <button data-go="2"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Discover</button>
+      <button data-go="3"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></svg>Event</button>
+      <button data-go="4"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M20 20h.01M17 20v-3"/></svg>Check-in</button>
+      <button data-go="5"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Hours</button>
+      <button data-go="6"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg><span class="badge" id="msgBadge" hidden></span>Messages</button>
+    </nav>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+</div>
+<noscript>Helply needs JavaScript turned on to run.</noscript>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
