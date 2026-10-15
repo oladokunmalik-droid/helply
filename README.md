@@ -9,6 +9,11 @@ A static, mobile-first volunteer app prototype. No build step and no server.
 - `assets/`: logo and favicon
 - `.nojekyll`: tells GitHub Pages to serve files as they are
 
+## Layout
+- **Wide screens (desktop, laptop, tablet landscape):** all six screens appear on one page, scaled to fit the window. Everything is live, and an action in one screen updates the others (for example, signing up on screen 3 creates the check-in QR on screen 4 and the chat on screen 6). Each screen has an **Open** button that switches to a full-size single phone.
+- **Phones and narrow windows:** one screen at a time with a bottom tab bar. On first load the purple navigation opens by itself. The purple **Menu** button on the left of the bar opens the full list of screens (Sign in, Discover, Event, Check-in, Hours, Messages) plus Reset demo, so every screen is reachable on a phone.
+- The **One-phone view** and **Show all screens** buttons switch between them. Starting a new overview shows a demo profile named Alex. Demo activity is never sent to Formspree. It only sends once someone signs in with their own name.
+
 ## Deploy on GitHub Pages
 1. Create a new GitHub repository and upload everything in this folder to the root (include the hidden `.nojekyll` file).
 2. Open **Settings > Pages**.
