@@ -1,4 +1,3 @@
-
 /* ============ CONFIG ============ */
 // Paste a NewsAPI.org key here to pull live local headlines. Leave empty to use sample headlines.
 // (NewsAPI blocks browser calls on its free plan outside localhost, so production should proxy through your server.)
@@ -27,6 +26,7 @@ async function sendToFormspree(kind, fields){
 }
 // Sends in the background so the app never waits on the network.
 function track(kind,fields){
+  if(state.user&&state.user.demo) return; // demo activity is never submitted
   sendToFormspree(kind,fields).then(ok=>{ if(!ok) toast("We couldn't reach Helply's server. Check your connection."); });
 }
 const RAFFLE_MIN_HOURS = 20, HOURS_GOAL = 150;
@@ -96,7 +96,7 @@ function setCity(city,zip,mi){ensureEvents(city);state.city=city;state.cause="Al
 let state;
 function freshState(){
   return {screen:1,user:null,city:"Chicago",cause:"All",eventId:"c1",joined:[],checked:[],log:initialLog(),
-          raffle:false,ig:null,chats:{},news:null,loginMode:"login",idType:"School ID",loginErr:"",nameDraft:"",zip:"",dist:null,locOpen:false,locErr:"",newsCity:null,igShare:false,threads:[],blocked:[],reports:[],view:"list",threadId:null,newEv:null,reportFor:null,openMsg:null,confirmBlock:null};
+          raffle:false,ig:null,chats:{},news:null,loginMode:"login",idType:"School ID",loginErr:"",nameDraft:"",zip:"",dist:null,locOpen:false,locErr:"",newsCity:null,igShare:false,threads:[],blocked:[],reports:[],view:"list",threadId:null,newEv:null,reportFor:null,openMsg:null,confirmBlock:null,checkinId:null};
 }
 state = freshState();
 
@@ -137,10 +137,12 @@ function bot(w=78){
 
 /* ============ NAV ============ */
 function go(n){
-  if(n>1 && !state.user){ state.user={name:"Alex",idType:"School ID"}; toast("Signed in as demo student Alex"); }
+  if(n>1 && !state.user){ state.user={name:"Alex",idType:"School ID",demo:true}; toast("Signed in as demo student Alex"); }
   state.screen=n;
+  if(OVERVIEW){ renderAllKeep(); $("#s"+n).scrollTop=0; flash(n); return; }
   $$(".screen").forEach((s,i)=>s.classList.toggle("active",i+1===n));
-  $("#tabs").hidden = n===1;
+  $("#tabs").hidden = false;
+  closeNav(false);
   $$("#tabs button").forEach(b=>b.setAttribute("aria-current",+b.dataset.go===n));
   $$("#railList button").forEach(b=>b.setAttribute("aria-current",+b.dataset.go===n));
   ({1:r1,2:r2,3:r3,4:r4,5:r5,6:r6})[n]();
@@ -150,7 +152,7 @@ function go(n){
 document.addEventListener("click",e=>{
   const g=e.target.closest("[data-go]"); if(g){go(+g.dataset.go)}
 });
-$("#resetBtn").onclick=()=>{state=freshState();go(1);toast("Demo reset")};
+
 
 /* ============ 1 SIGN IN ============ */
 function r1(){
@@ -185,6 +187,7 @@ function r1(){
     s.nameDraft=fn;
     if(!fn){s.loginErr="Type your name so organizers know who to expect.";$("#err").textContent=s.loginErr;$("#fn").focus();return}
     if(id.length<6){s.loginErr=`Enter at least 6 characters from your ${signup?s.idType:"ID"}.`;$("#err").textContent=s.loginErr;$("#idn").focus();return}
+    if(s.user&&s.user.demo){s.joined=[];s.threads=[];s.checkinId=null}
     s.user={name:fn,idType:s.idType}; s.loginErr="";
     toast(signup?"Account created. Welcome, "+fn+"!":"Welcome back, "+fn+"!");
     // The ID number itself is never sent anywhere.
@@ -312,7 +315,7 @@ function renderCta(){
   const e=ev(state.eventId), j=state.joined.includes(e.id), c=$("#cta");
   c.innerHTML=j?`<button class="btn block" data-go="4">You're signed up · Show my QR code</button><button class="btn block" id="chatBtn" style="margin-top:8px">Open event chat</button>`
               :`<button class="btn block" id="joinBtn">Sign up · ${spots(e)} spots left</button>`;
-  const b=$("#joinBtn"); if(b) b.onclick=()=>{state.joined.push(e.id);ensureThreads();toast("You're signed up. Your QR code and event chat are ready.");renderCta();
+  const b=$("#joinBtn"); if(b) b.onclick=()=>{state.joined.push(e.id);state.checkinId=e.id;ensureThreads();toast("You're signed up. Your QR code and event chat are ready.");renderCta();
     track("event_signup",{name:state.user.name,event:e.title,event_id:e.id,organization:e.org,city:e.city,date:e.date,time:e.time});};
   const cb=$("#chatBtn"); if(cb) cb.onclick=()=>{ensureThreads();state.view="chat";state.threadId="g:"+e.id;state.openMsg=null;go(6)};
 }
@@ -364,7 +367,7 @@ async function askBot(text){
     if(!reply) throw new Error("empty");
   }catch(err){ reply=fallbackReply(text); }
   hist.push({role:"assistant",content:reply});
-  if(state.screen===3) renderChat(false);
+  if(isShown(3)) renderChat(false);
 }
 
 /* ============ 4 CHECK-IN ============ */
@@ -375,8 +378,8 @@ function r4(){
      <div class="card empty">${mark}<b>No events yet</b><span class="sub">Sign up for an event to get your personal check-in QR code.</span>
      <button class="btn" data-go="2">Find an event</button></div>`; return;
   }
-  if(!joined.includes(s.eventId)) s.eventId=joined[0];
-  const e=ev(s.eventId), done=s.checked.includes(e.id);
+  if(!joined.includes(s.checkinId)) s.checkinId=joined.includes(s.eventId)?s.eventId:joined[0];
+  const e=ev(s.checkinId), done=s.checked.includes(e.id);
   $("#s4").innerHTML=`<h1 class="title">Check-in</h1>
    ${joined.length>1?`<div class="field" style="margin-top:10px"><label for="evSel">Event</label><select class="city" id="evSel" style="border-radius:12px">${joined.map(id=>`<option value="${id}" ${id===e.id?"selected":""}>${esc(ev(id).title)}</option>`).join("")}</select></div>`:""}
    ${done?`<div class="card ok">${mark}<div class="big">${I.check}</div><h2>You're checked in</h2>
@@ -388,7 +391,7 @@ function r4(){
       </div>
       <ol class="steps"><li>Arrive 10 minutes early and find the organizer.</li><li>Hold this code up to the organizer's phone.</li><li>Your hours appear in your tracker right away.</li></ol>
       <button class="btn ghost block" id="scanBtn" style="margin-top:16px">Demo: simulate organizer scan</button>`}`;
-  const sel=$("#evSel"); if(sel) sel.onchange=x=>{s.eventId=x.target.value;r4()};
+  const sel=$("#evSel"); if(sel) sel.onchange=x=>{s.checkinId=x.target.value;r4()};
   const q=$("#qr");
   if(q){
     const payload=`helply://checkin?event=${e.id}&user=${encodeURIComponent(s.user.name)}`;
@@ -491,9 +494,8 @@ function ensureThreads(){
   updateBadge();
 }
 function updateBadge(){
-  const b=$("#msgBadge"); if(!b) return;
   const n=state.threads.filter(t=>!hiddenThread(t)).reduce((a,t)=>a+t.unread,0);
-  b.textContent=n>9?"9+":String(n); b.hidden=!n;
+  ["msgBadge","msgBadge2"].forEach(id=>{const b=document.getElementById(id); if(!b) return; b.textContent=n>9?"9+":String(n); b.hidden=!n});
 }
 function checkSafe(text){
   if(!text.trim()) return "Type a message first.";
@@ -521,10 +523,10 @@ function sendMessage(t,text){
       if(!pool.length) return; from=pool[n%pool.length].id;
     }
     t.msgs.push({id:uid(),from,text:replyText(text,n),t:Date.now()});
-    const viewing=state.screen===6&&state.view==="chat"&&state.threadId===t.id;
-    if(viewing) drawChat(); else { t.unread++; if(state.screen!==6) toast("New message from "+first(personOf(from).name)); }
+    const viewing=isShown(6)&&state.view==="chat"&&state.threadId===t.id;
+    if(viewing) drawChat(); else { t.unread++; if(!isShown(6)) toast("New message from "+first(personOf(from).name)); }
     updateBadge();
-    if(state.screen===6&&state.view==="list") drawList();
+    if(isShown(6)&&state.view==="list") drawList();
   },1400);
 }
 function blockPerson(id){
@@ -645,6 +647,96 @@ function drawChat(){
   $("#msgSend").onclick=send; inp.onkeydown=k=>{if(k.key==="Enter")send()};
 }
 
+/* ============ NAVIGATION MENU ============ */
+const NAV=[[1,"Sign in","School or state ID"],[2,"Discover","ZIP lookup, list + news ideas"],[3,"Event + Tidy bot","Date, cause, AI logistics"],[4,"Check-in","Personal QR code"],[5,"Hours","Tracker, raffle, Instagram"],[6,"Messages","Event chats, safe DMs"]];
+function openNav(){
+  const el=$("#navSheet");
+  el.innerHTML=`<div class="ns-top"><div class="ns-brand"><img class="ns-logo" src="${LOGO}" alt=""><h2>Helply</h2></div><button class="ns-close" id="navClose" aria-label="Close menu">×</button></div>
+    <p>Jump to any screen.</p>
+    <ol>${NAV.map(([n,t,s])=>`<li><button data-nav="${n}" aria-current="${state.screen===n}"><b>${t}</b><span>${s}</span></button></li>`).join("")}</ol>
+    <div class="ns-actions">${innerWidth>820?'<button class="reset" id="navAll">Show all screens</button>':""}<button class="reset" id="navReset">Reset demo</button></div>`;
+  el.hidden=false; $("#menuBtn").setAttribute("aria-expanded","true");
+  $$("[data-nav]",el).forEach(b=>b.onclick=()=>go(+b.dataset.nav));
+  $("#navClose").onclick=()=>closeNav(true);
+  $("#navReset").onclick=()=>{closeNav(false);resetDemo()};
+  const all=$("#navAll"); if(all) all.onclick=()=>{closeNav(false);userMode="overview";applyMode()};
+  const cur=$('[data-nav][aria-current="true"]',el)||$("[data-nav]",el); cur.focus();
+}
+function closeNav(refocus){
+  const el=$("#navSheet"); if(!el||el.hidden) return;
+  el.hidden=true; $("#menuBtn").setAttribute("aria-expanded","false");
+  if(refocus) $("#menuBtn").focus();
+}
+$("#menuBtn").onclick=()=>{ $("#navSheet").hidden?openNav():closeNav(true); };
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeNav(true); });
+
+/* ============ ALL-SCREENS LAYOUT ============ */
+// On wide screens every screen is shown at once, scaled to fit the window. On phones (or via the toggle) one screen shows at a time.
+const PW=360, PH=740, GAP=22, CAP=40;
+let userMode="overview", OVERVIEW=false;
+const RENDER={1:r1,2:r2,3:r3,4:r4,5:r5,6:r6};
+const isShown=n=>OVERVIEW||state.screen===n;
+
+function seedDemo(){ // a demo profile so every screen has something to show; real sign-in replaces it
+  state.user={name:"Alex",idType:"School ID",demo:true};
+  state.joined=["c2"]; state.checkinId="c2"; ensureThreads();
+}
+const TEXTY=el=>el.tagName==="INPUT"&&!["file","radio","checkbox","button","submit"].includes(el.type);
+function renderKeep(n){ // re-render a screen without losing typed text or scroll position
+  const sec=$("#s"+n), keep={};
+  $$("input[id]",sec).forEach(el=>{ if(TEXTY(el)) keep[el.id]={v:el.value,f:document.activeElement===el} });
+  const st=sec.scrollTop; RENDER[n](); sec.scrollTop=st;
+  Object.keys(keep).forEach(id=>{ const el=document.getElementById(id); if(el&&TEXTY(el)){ el.value=keep[id].v; if(keep[id].f) el.focus(); } });
+}
+function renderAllKeep(){ for(let n=1;n<=6;n++) renderKeep(n); updateBadge(); }
+function flash(n){
+  const c=$('.cell[data-n="'+n+'"]'); if(!c) return;
+  c.classList.remove("focus"); void c.offsetWidth; c.classList.add("focus");
+  setTimeout(()=>c.classList.remove("focus"),1500);
+}
+function layoutOverview(){
+  if(!OVERVIEW) return;
+  const head=$("#ovHead").offsetHeight, W=innerWidth-32, H=innerHeight-head-16;
+  let best=null;
+  for(let cols=1;cols<=6;cols++){
+    const rows=Math.ceil(6/cols), nw=cols*PW+(cols-1)*GAP, nh=rows*(PH+CAP)+(rows-1)*GAP;
+    const s=Math.min(1,W/nw,H/nh);
+    if(!best||s>best.s+0.001) best={s,cols,nw,nh};
+  }
+  $(".screens").style.cssText="--cols:"+best.cols+";width:"+best.nw+"px;transform:scale("+best.s+")";
+  $("#phone").style.cssText="width:"+(best.nw*best.s)+"px;height:"+(best.nh*best.s)+"px";
+}
+function applyMode(){
+  closeNav(false);
+  OVERVIEW=userMode==="overview"&&innerWidth>820;
+  document.body.classList.toggle("overview",OVERVIEW);
+  if(OVERVIEW){ if(!state.user) seedDemo(); layoutOverview(); renderAllKeep(); }
+  else{ $("#phone").removeAttribute("style"); $(".screens").removeAttribute("style"); go(state.screen||1); }
+}
+function resetDemo(){ state=freshState(); applyMode(); toast("Demo reset"); }
+
+// keep the other screens in step after any action
+function syncOthers(e){
+  if(!OVERVIEW||!e.target.closest) return;
+  const src=e.target.closest(".screen"); if(!src) return;
+  const from=+src.id.slice(1);
+  setTimeout(()=>{ for(let n=1;n<=6;n++) if(n!==from) renderKeep(n); updateBadge(); },0);
+}
+// Capture phase: read which screen was used before its handler replaces the clicked element.
+document.addEventListener("click",syncOthers,true);
+document.addEventListener("change",syncOthers,true);
+document.addEventListener("keydown",e=>{ if(e.key==="Enter") syncOthers(e); },true);
+document.addEventListener("click",e=>{
+  const o=e.target.closest("[data-single]"); if(o){ userMode="single"; state.screen=+o.dataset.single; applyMode(); }
+});
+$("#toSingle").onclick=()=>{ userMode="single"; applyMode(); };
+$("#toOverview").onclick=()=>{ userMode="overview"; applyMode(); };
+$$(".js-reset").forEach(b=>b.onclick=resetDemo);
+let rz; addEventListener("resize",()=>{ cancelAnimationFrame(rz); rz=requestAnimationFrame(()=>{
+  const want=userMode==="overview"&&innerWidth>820; if(want!==OVERVIEW) applyMode(); else layoutOverview(); }); });
+
 /* ============ INIT ============ */
 $$("img[data-logo]").forEach(i=>i.src=LOGO);
-go(1);
+applyMode();
+// On a phone, start with the purple navigation open so every screen is one tap away.
+if(!OVERVIEW) openNav();
